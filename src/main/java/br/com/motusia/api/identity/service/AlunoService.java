@@ -1,13 +1,20 @@
 package br.com.motusia.api.identity.service;
 
+import br.com.motusia.api.identity.dto.AjusteNivelRequestDto;
 import br.com.motusia.api.identity.dto.AlunoCreateDTO;
 import br.com.motusia.api.identity.dto.AlunoUpdateDTO;
 import br.com.motusia.api.identity.model.Aluno;
 import br.com.motusia.api.identity.model.Usuario;
+import br.com.motusia.api.identity.model.Voluntario;
+import br.com.motusia.api.learning.model.NivelCompetencia;
 import br.com.motusia.api.learning.model.Turma;
+import br.com.motusia.api.progress.model.HistoricoNivel;
+import br.com.motusia.api.progress.service.TrilhaService;
 import io.quarkus.elytron.security.common.BcryptUtil;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +25,9 @@ import java.util.Date;
 public class AlunoService {
 
     private static final Logger logger = LoggerFactory.getLogger(AlunoService.class);
+
+    @Inject
+    TrilhaService trilhaService;
 
     @Transactional
     public Aluno criarAluno(AlunoCreateDTO dto) {
@@ -81,5 +91,46 @@ public class AlunoService {
         Usuario usuario = aluno.getUsuario();
         usuario.setAtivo("N");
         usuario.persist();
+    }
+
+    @Transactional
+    public void ajustarNivel(AjusteNivelRequestDto dto) {
+        if (dto.getJustificativa() == null || dto.getJustificativa().isBlank()) {
+            throw new BadRequestException("A justificativa é obrigatória para a intervenção manual.");
+        }
+
+        Aluno aluno = Aluno.findById(dto.getAlunoId());
+        if (aluno == null) {
+            throw new NotFoundException("Aluno não encontrado com o ID: " + dto.getAlunoId());
+        }
+
+        NivelCompetencia nivelNovo = NivelCompetencia.findById(dto.getNovoNivelId());
+        if (nivelNovo == null) {
+            throw new NotFoundException("Nível de competência não encontrado com o ID: " + dto.getNovoNivelId());
+        }
+
+        Voluntario voluntario = Voluntario.findById(dto.getVoluntarioId());
+        if (voluntario == null) {
+            throw new NotFoundException("Voluntário não encontrado com o ID: " + dto.getVoluntarioId());
+        }
+
+        NivelCompetencia nivelAnterior = aluno.getNivelAtual();
+
+        HistoricoNivel historico = new HistoricoNivel();
+        historico.setAluno(aluno);
+        historico.setNivelAnterior(nivelAnterior);
+        historico.setNivelNovo(nivelNovo);
+        historico.setDataMudanca(new Date());
+        historico.setJustificativa(dto.getJustificativa());
+        historico.setTipoReavaliacao("MANUAL");
+        historico.persist();
+
+        aluno.setNivelAtual(nivelNovo);
+        aluno.persist();
+
+        trilhaService.ativarNovaTrilha(aluno);
+
+        logger.info("Ajuste de nível para o aluno {} concluído pelo voluntário {}. Justificativa: {}",
+                aluno.getId(), voluntario.getId(), dto.getJustificativa());
     }
 }

@@ -1,5 +1,6 @@
 package br.com.motusia.api.identity.resource;
 
+import br.com.motusia.api.identity.dto.AjusteNivelRequestDto;
 import br.com.motusia.api.identity.dto.AlunoCreateDTO;
 import br.com.motusia.api.identity.dto.AlunoUpdateDTO;
 import br.com.motusia.api.identity.model.Aluno;
@@ -36,5 +37,12 @@ public class AlunoResource {
     public Response inativarAluno(@PathParam("id") Long id) {
         alunoService.inativandoAluno(id);
         return Response.noContent().build();
+    }
+
+    @POST
+    @Path("/ajustar-nivel")
+    public Response ajustarNivel(AjusteNivelRequestDto ajusteNivelRequestDto) {
+        alunoService.ajustarNivel(ajusteNivelRequestDto);
+        return Response.ok().build();
     }
 }

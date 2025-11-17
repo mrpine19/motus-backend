@@ -41,7 +41,7 @@ public class Desafio extends PanacheEntityBase {
     private String feedbackExplicacao;
 
     @Column(name = "ativo")
-    private Boolean ativo;
+    private String ativo;
 
     @ManyToOne
     @JoinColumn(name = "id_nivel_dificuldade")
@@ -99,11 +99,11 @@ public class Desafio extends PanacheEntityBase {
         this.feedbackExplicacao = feedbackExplicacao;
     }
 
-    public Boolean getAtivo() {
+    public String getAtivo() {
         return ativo;
     }
 
-    public void setAtivo(Boolean ativo) {
+    public void setAtivo(String ativo) {
         this.ativo = ativo;
     }
 
