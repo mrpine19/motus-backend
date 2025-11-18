@@ -43,7 +43,7 @@ public class DesafioService {
             desafio.setAreaCompetencia(dto.getAreaCompetencia());
             desafio.setRespostaCorreta(dto.getRespostaCorreta());
             desafio.setFeedbackExplicacao(dto.getFeedbackExplicacao());
-            desafio.setAtivo(true);
+            desafio.setAtivo("S");
 
             if (dto.getNivelDificuldadeId() != null) {
                 NivelCompetencia nivel = NivelCompetencia.findById(dto.getNivelDificuldadeId());
