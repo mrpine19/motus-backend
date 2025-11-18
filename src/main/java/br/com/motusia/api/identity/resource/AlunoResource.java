@@ -1,12 +1,11 @@
 package br.com.motusia.api.identity.resource;
 
-import br.com.motusia.api.identity.dto.AjusteNivelRequestDto;
+import br.com.motusia.api.identity.dto.AjusteNivelDto;
 import br.com.motusia.api.identity.dto.AlunoCreateDTO;
 import br.com.motusia.api.identity.dto.AlunoUpdateDTO;
 import br.com.motusia.api.identity.model.Aluno;
 import br.com.motusia.api.identity.service.AlunoService;
 import jakarta.inject.Inject;
-import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -20,29 +19,33 @@ public class AlunoResource {
     AlunoService alunoService;
 
     @POST
-    public Response criarAluno(@Valid AlunoCreateDTO dto) {
-        Aluno alunoCriado = alunoService.criarAluno(dto);
-        return Response.status(Response.Status.CREATED).entity(alunoCriado).build();
+    public Response criarAluno(AlunoCreateDTO dto) {
+        Aluno aluno = alunoService.criarAluno(dto);
+        return Response.status(Response.Status.CREATED).entity(aluno).build();
     }
 
     @PUT
     @Path("/{id}")
-    public Response atualizarAluno(@PathParam("id") Long id, @Valid AlunoUpdateDTO dto) {
-        Aluno alunoAtualizado = alunoService.atualizarAluno(id, dto);
-        return Response.ok(alunoAtualizado).build();
+    public Response atualizarAluno(@PathParam("id") Long id, AlunoUpdateDTO dto) {
+        Aluno aluno = alunoService.atualizarAluno(id, dto);
+        return Response.ok(aluno).build();
     }
 
-    @PATCH
-    @Path("/{id}/inativar")
+    @DELETE
+    @Path("/{id}")
     public Response inativarAluno(@PathParam("id") Long id) {
         alunoService.inativandoAluno(id);
         return Response.noContent().build();
     }
 
     @POST
-    @Path("/ajustar-nivel")
-    public Response ajustarNivel(AjusteNivelRequestDto ajusteNivelRequestDto) {
-        alunoService.ajustarNivel(ajusteNivelRequestDto);
-        return Response.ok().build();
+    @Path("/{alunoId}/ajustar-nivel/voluntario/{voluntarioId}")
+    public Response ajustarNivelManualmente(
+            @PathParam("alunoId") Long alunoId,
+            @PathParam("voluntarioId") Long voluntarioId,
+            AjusteNivelDto dto) {
+
+        alunoService.ajustarNivelManualmente(alunoId, voluntarioId, dto);
+        return Response.ok().entity("Nível do aluno ajustado com sucesso.").build();
     }
 }

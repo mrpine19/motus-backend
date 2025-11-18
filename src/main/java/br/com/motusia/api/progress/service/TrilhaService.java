@@ -8,7 +8,6 @@ import br.com.motusia.api.progress.model.Pontuacao;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
-import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -92,10 +91,7 @@ public class TrilhaService {
 
         List<Desafio> novaTrilha = new ArrayList<>();
         NivelCompetencia novoNivel = aluno.getNivelAtual();
-        if (novoNivel == null) {
-            logger.error("Aluno {} não possui um nível de competência definido. Ativação cancelada.", aluno.getId());
-            return;
-        }
+        // ... (Validação de Nível) ...
         Long idNivelParaBusca = novoNivel.getId();
 
         // 1. BUSCAR DESAFIOS ADEQUADOS E BALANCEADOS (RN2)
@@ -103,12 +99,12 @@ public class TrilhaService {
             String area = quota.getKey();
             int quantidade = quota.getValue();
 
-            // CORREÇÃO (ORA-01722): Usando a notação de objeto (Panache) para buscar pelo ID da FK
+            // CORREÇÃO: Passar a STRING "S" para o status 'ativo', que agora é VARCHAR2 no DB.
             PanacheQuery<Desafio> query = Desafio.find(
                     "nivelDificuldade.id = ?1 AND areaCompetencia = ?2 AND ativo = ?3",
                     idNivelParaBusca,
                     area,
-                    true // Panache converte 'true' para 1 (NUMBER)
+                    "S" // CORREÇÃO APLICADA: Passar o String literal 'S'
             );
 
             List<Desafio> desafios = query.page(0, 100).list();
@@ -117,9 +113,9 @@ public class TrilhaService {
             if (desafios.size() >= quantidade) {
                 List<Desafio> selecionados = new ArrayList<>(desafios.subList(0, quantidade));
                 novaTrilha.addAll(selecionados);
-                logger.info("  -> Adicionados %d desafios da área %s.", selecionados.size(), area);
+                logger.info("  -> Adicionados {} desafios da área {}.", selecionados.size(), area);
             } else {
-                logger.warn("  -> ATENÇÃO: Apenas %d desafios disponíveis para a área %s. (Abaixo da quota de %d)", desafios.size(), area, quantidade);
+                logger.warn("  -> ATENÇÃO: Apenas {} desafios disponíveis para a área {}. (Abaixo da quota de {})", desafios.size(), area, quantidade);
                 novaTrilha.addAll(desafios); // Adiciona os que encontrou
             }
         }

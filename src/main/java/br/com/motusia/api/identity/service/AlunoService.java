@@ -1,6 +1,6 @@
 package br.com.motusia.api.identity.service;
 
-import br.com.motusia.api.identity.dto.AjusteNivelRequestDto;
+import br.com.motusia.api.identity.dto.AjusteNivelDto;
 import br.com.motusia.api.identity.dto.AlunoCreateDTO;
 import br.com.motusia.api.identity.dto.AlunoUpdateDTO;
 import br.com.motusia.api.identity.model.Aluno;
@@ -94,14 +94,14 @@ public class AlunoService {
     }
 
     @Transactional
-    public void ajustarNivel(AjusteNivelRequestDto dto) {
+    public void ajustarNivelManualmente(Long alunoId, Long voluntarioId, AjusteNivelDto dto) {
         if (dto.getJustificativa() == null || dto.getJustificativa().isBlank()) {
             throw new BadRequestException("A justificativa é obrigatória para a intervenção manual.");
         }
 
-        Aluno aluno = Aluno.findById(dto.getAlunoId());
+        Aluno aluno = Aluno.findById(alunoId);
         if (aluno == null) {
-            throw new NotFoundException("Aluno não encontrado com o ID: " + dto.getAlunoId());
+            throw new NotFoundException("Aluno não encontrado com o ID: " + alunoId);
         }
 
         NivelCompetencia nivelNovo = NivelCompetencia.findById(dto.getNovoNivelId());
@@ -109,28 +109,35 @@ public class AlunoService {
             throw new NotFoundException("Nível de competência não encontrado com o ID: " + dto.getNovoNivelId());
         }
 
-        Voluntario voluntario = Voluntario.findById(dto.getVoluntarioId());
+        Voluntario voluntario = Voluntario.findById(voluntarioId);
         if (voluntario == null) {
-            throw new NotFoundException("Voluntário não encontrado com o ID: " + dto.getVoluntarioId());
+            throw new NotFoundException("Voluntário não encontrado com o ID: " + voluntarioId);
         }
 
-        NivelCompetencia nivelAnterior = aluno.getNivelAtual();
+        NivelCompetencia nivelAntigo = aluno.getNivelAtual();
 
+        // RN3: Registro de Auditoria (CORRIGIDO)
         HistoricoNivel historico = new HistoricoNivel();
         historico.setAluno(aluno);
-        historico.setNivelAnterior(nivelAnterior);
+        historico.setNivelAnterior(nivelAntigo);
         historico.setNivelNovo(nivelNovo);
-        historico.setDataMudanca(new Date());
         historico.setJustificativa(dto.getJustificativa());
-        historico.setTipoReavaliacao("MANUAL");
+
+        // --- LINHAS FALTANTES CORRIGIDAS ---
+        historico.setTipoReavaliacao("MANUAL"); // Define o tipo (NOT NULL)
+        historico.setDataMudanca(new Date()); // Define a data (NOT NULL no DDL)
+        // --- FIM DA CORREÇÃO ---
+
         historico.persist();
 
+        // RF4 & RN1: Persistência da Mudança e Superposição
         aluno.setNivelAtual(nivelNovo);
         aluno.persist();
 
+        // RN4: Ativação de Trilha
         trilhaService.ativarNovaTrilha(aluno);
 
-        logger.info("Ajuste de nível para o aluno {} concluído pelo voluntário {}. Justificativa: {}",
-                aluno.getId(), voluntario.getId(), dto.getJustificativa());
+        logger.info("Nível do aluno {} ajustado manualmente para '{}' pelo voluntário {}. Justificativa: {}",
+                aluno.getId(), nivelNovo.getDescricao(), voluntario.getId(), dto.getJustificativa());
     }
 }
