@@ -39,44 +39,62 @@ public class TrilhaService {
      * É disparado pelo PontuacaoService (US 2) quando o gatilho de reavaliação é atingido.
      * Executa a lógica de IA (simulada) e atualiza o nível do aluno.
      */
-    @Transactional // Obrigatório para acessar o DB (find/persist)
-    public void onReavaliacao(@Observes Aluno aluno) {
-        logger.info("Evento de reavaliação recebido para o Aluno ID: %d. Calculando nível...", aluno.getId());
+    @Transactional
+    public void onReavaliacao(@Observes Aluno alunoEvento) { // Renomeie para não confundir
+        logger.info("Evento de reavaliação recebido para o Aluno ID: %d. Calculando nível...", alunoEvento.getId());
 
-        // 1. Coleta os dados para a IA (RF2)
-        List<Pontuacao> ultimasPontuacoes = Pontuacao.find(
-                "aluno = ?1 ORDER BY dataConclusao DESC", aluno
-        ).page(0, GATILHO_REAVALIACAO).list();
+        try {
+            // --- CORREÇÃO DO ERRO "DETACHED ENTITY" ---
+            // Recarregamos o aluno para garantir que ele esteja "Managed" (rastreado) nesta transação.
+            Aluno alunoManaged = Aluno.findById(alunoEvento.getId());
 
-        // 2. Simulação da Inferência (RF3)
-        long acertos = ultimasPontuacoes.stream().filter(Pontuacao::getAcertou).count();
-        double percentualAcerto = (double) acertos / ultimasPontuacoes.size();
+            // Se por algum motivo o aluno não existir mais (raro, mas possível), abortamos.
+            if (alunoManaged == null) {
+                logger.error("Aluno não encontrado no banco de dados.");
+                return;
+            }
 
-        NivelCompetencia nivelSugerido = determinarNovoNivel(aluno.getNivelAtual(), percentualAcerto);
+            // 1. Coleta os dados (Usando o alunoManaged)
+            List<Pontuacao> ultimasPontuacoes = Pontuacao.find(
+                    "aluno = ?1 ORDER BY dataConclusao DESC", alunoManaged
+            ).page(0, GATILHO_REAVALIACAO).list();
 
-        // 3. Persistência e Ativação (RN3, RF4)
-        if (nivelSugerido != null && !nivelSugerido.equals(aluno.getNivelAtual())) {
+            // 2. Simulação da Inferência
+            long acertos = ultimasPontuacoes.stream().filter(Pontuacao::getAcertou).count();
+            double percentualAcerto = (double) acertos / ultimasPontuacoes.size();
 
-            // RN3: Registro de Auditoria (Persiste o log)
-            HistoricoNivel historico = new HistoricoNivel();
-            historico.setAluno(aluno);
-            historico.setNivelAnterior(aluno.getNivelAtual());
-            historico.setNivelNovo(nivelSugerido);
-            historico.setDataMudanca(new Date());
-            historico.setTipoReavaliacao("IA_AUTOMATICA");
-            historico.persist();
+            NivelCompetencia nivelSugerido = determinarNovoNivel(alunoManaged.getNivelAtual(), percentualAcerto);
 
-            // RF4: Atualiza o Nível do Aluno
-            aluno.setNivelAtual(nivelSugerido);
-            aluno.persist();
-            logger.info("Nível do Aluno %d atualizado para %s (%.2f%% acerto).", aluno.getId(), nivelSugerido.getCodigo(), percentualAcerto * 100);
+            // 3. Persistência e Ativação
+            if (nivelSugerido != null && !nivelSugerido.equals(alunoManaged.getNivelAtual())) {
 
-            // 4. RN4: Ativação da Nova Trilha
-            // Chama o método que busca os novos desafios para o nível atualizado
-            ativarNovaTrilha(aluno);
+                // RN3: Registro de Auditoria (Historico é novo, então .persist() é obrigatório)
+                HistoricoNivel historico = new HistoricoNivel();
+                historico.setAluno(alunoManaged);
+                historico.setNivelAnterior(alunoManaged.getNivelAtual());
+                historico.setNivelNovo(nivelSugerido);
+                historico.setDataMudanca(new Date());
+                historico.setTipoReavaliacao("IA_AUTOMATICA");
+                historico.persist(); // OK: Objeto novo
 
-        } else {
-            logger.info("Nível do Aluno %d mantido em %s (%.2f%% acerto).", aluno.getId(), aluno.getNivelAtual().getCodigo(), percentualAcerto * 100);
+                // RF4: Atualiza o Nível do Aluno
+                // Como 'alunoManaged' está rastreado, não precisamos chamar .persist()!
+                // O @Transactional vai salvar automaticamente no final (Dirty Checking).
+                alunoManaged.setNivelAtual(nivelSugerido);
+
+                // Se quiser ser explícito, use .persist(), mas como ele já é managed, o Hibernate entende.
+                // alunoManaged.persist();
+
+                logger.info("Nível do Aluno %d atualizado para %s (%.2f%% acerto).", alunoManaged.getId(), nivelSugerido.getCodigo(), percentualAcerto * 100);
+
+                // 4. RN4: Ativação da Nova Trilha
+                ativarNovaTrilha(alunoManaged);
+
+            } else {
+                logger.info("Nível do Aluno %d mantido em %s (%.2f%% acerto).", alunoManaged.getId(), alunoManaged.getNivelAtual().getCodigo(), percentualAcerto * 100);
+            }
+        } catch (Exception e) {
+            logger.error("Erro na reavaliação: " + e.getMessage(), e);
         }
     }
 
