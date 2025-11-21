@@ -1,9 +1,9 @@
 package br.com.motusia.api.learning.service;
 
 import br.com.motusia.api.identity.model.Voluntario;
-import br.com.motusia.api.identity.service.AlunoService;
 import br.com.motusia.api.learning.dto.DesafioDto;
 import br.com.motusia.api.learning.dto.DesafioRequestDto;
+import br.com.motusia.api.learning.model.AreaCompetencia;
 import br.com.motusia.api.learning.model.Desafio;
 import br.com.motusia.api.learning.model.NivelCompetencia;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -37,10 +37,12 @@ public class DesafioService {
                 throw new NotFoundException("Voluntário criador não encontrado.");
             }
 
+            AreaCompetencia areaCompetencia = AreaCompetencia.find("codigo = ?1", dto.getAreaCompetencia()).firstResult();
+
             Desafio desafio = new Desafio();
             desafio.setTitulo(dto.getTitulo());
             desafio.setDescricao(dto.getDescricao());
-            desafio.setAreaCompetencia(dto.getAreaCompetencia());
+            desafio.setAreaCompetencia(areaCompetencia);
             desafio.setRespostaCorreta(dto.getRespostaCorreta());
             desafio.setFeedbackExplicacao(dto.getFeedbackExplicacao());
             desafio.setAtivo("S");
