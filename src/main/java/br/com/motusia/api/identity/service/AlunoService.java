@@ -2,6 +2,7 @@ package br.com.motusia.api.identity.service;
 
 import br.com.motusia.api.identity.dto.AjusteNivelDto;
 import br.com.motusia.api.identity.dto.AlunoCreateDTO;
+import br.com.motusia.api.identity.dto.AlunoDTO;
 import br.com.motusia.api.identity.dto.AlunoUpdateDTO;
 import br.com.motusia.api.identity.model.Aluno;
 import br.com.motusia.api.identity.model.Usuario;
@@ -19,7 +20,9 @@ import jakarta.ws.rs.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 @ApplicationScoped
 public class AlunoService {
@@ -30,11 +33,17 @@ public class AlunoService {
     TrilhaService trilhaService;
 
     @Transactional
-    public Aluno criarAluno(AlunoCreateDTO dto) {
-        Turma turma = Turma.findById(dto.getIdTurma());
+    public AlunoDTO criarAluno(AlunoCreateDTO dto) {
+        Turma turma = Turma.find("nome", dto.getNomeTurma()).firstResult();
         if (turma == null) {
-            logger.error("Turma não encontrada com o ID: {}", dto.getIdTurma());
-            throw new NotFoundException("Turma não encontrada com o ID: " + dto.getIdTurma());
+            logger.error("Turma com nome '{}' não encontrada", dto.getNomeTurma());
+            throw new NotFoundException("Turma com nome '"+dto.getNomeTurma()+"' não encontrada");
+        }
+
+        NivelCompetencia nivelAtual = NivelCompetencia.find("descricao", dto.getNivelAtual()).firstResult();
+        if (nivelAtual == null) {
+            logger.error("Nível de competência com descrição '{}' não encontrada", dto.getNivelAtual());
+            throw new NotFoundException("Nível de competência com descrição '"+dto.getNivelAtual()+"' não encontrada");
         }
 
         Usuario usuario = new Usuario();
@@ -50,9 +59,10 @@ public class AlunoService {
         aluno.setTurma(turma);
         aluno.setDataCadastro(new Date());
         aluno.setStreakAtual(0);
+        aluno.setNivelAtual(nivelAtual);
         aluno.persist();
 
-        return aluno;
+        return new AlunoDTO(aluno);
     }
 
     @Transactional
@@ -139,5 +149,21 @@ public class AlunoService {
 
         logger.info("Nível do aluno {} ajustado manualmente para '{}' pelo voluntário {}. Justificativa: {}",
                 aluno.getId(), nivelNovo.getDescricao(), voluntario.getId(), dto.getJustificativa());
+    }
+
+    public List<AlunoDTO> listaTodasOsALunos() {
+        List<Aluno> alunos = Aluno.listAll();
+        List<AlunoDTO> alunoDTOS = new ArrayList<>();
+
+        for (Aluno aluno : alunos) {
+            AlunoDTO alunoDTO = new AlunoDTO();
+            alunoDTO.setId(aluno.getId());
+            alunoDTO.setNome(aluno.getUsuario().getNome());
+            alunoDTO.setEmail(aluno.getUsuario().getEmail());
+            alunoDTO.setNivelAtual(aluno.getNivelAtual().getDescricao());
+            alunoDTO.setNomeTurma(aluno.getTurma().getNome());
+            alunoDTOS.add(alunoDTO);
+        }
+        return alunoDTOS;
     }
 }

@@ -4,7 +4,8 @@ public class AlunoCreateDTO {
     private String nomeCompleto;
     private String email;
     private String senha;
-    private Long idTurma;
+    private String nivelAtual;
+    private String nomeTurma;
 
     public String getNomeCompleto() {
         return nomeCompleto;
@@ -30,11 +31,19 @@ public class AlunoCreateDTO {
         this.senha = senha;
     }
 
-    public Long getIdTurma() {
-        return idTurma;
+    public String getNivelAtual() {
+        return nivelAtual;
     }
 
-    public void setIdTurma(Long idTurma) {
-        this.idTurma = idTurma;
+    public void setNivelAtual(String nivelAtual) {
+        this.nivelAtual = nivelAtual;
+    }
+
+    public String getNomeTurma() {
+        return nomeTurma;
+    }
+
+    public void setNomeTurma(String nomeTurma) {
+        this.nomeTurma = nomeTurma;
     }
 }
