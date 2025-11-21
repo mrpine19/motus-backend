@@ -13,6 +13,9 @@ import jakarta.ws.rs.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @ApplicationScoped
 public class DesafioService {
 
@@ -31,9 +34,9 @@ public class DesafioService {
                 throw new BadRequestException("O campo Resposta Correta é obrigatório.");
             }
 
-            Voluntario voluntario = Voluntario.findById(dto.getVoluntarioId());
+            Voluntario voluntario = Voluntario.findById(dto.getNomeVoluntario());
             if (voluntario == null) {
-                logger.error("Voluntário criador %d não encontrado.", dto.getVoluntarioId());
+                logger.error("Voluntário criador %d não encontrado.", dto.getNomeVoluntario());
                 throw new NotFoundException("Voluntário criador não encontrado.");
             }
 
@@ -47,8 +50,8 @@ public class DesafioService {
             desafio.setFeedbackExplicacao(dto.getFeedbackExplicacao());
             desafio.setAtivo("S");
 
-            if (dto.getNivelDificuldadeId() != null) {
-                NivelCompetencia nivel = NivelCompetencia.findById(dto.getNivelDificuldadeId());
+            if (dto.getNivelDificuldade() != null) {
+                NivelCompetencia nivel = NivelCompetencia.findById(dto.getNivelDificuldade());
                 desafio.setNivelDificuldade(nivel);
             }
 
@@ -56,5 +59,62 @@ public class DesafioService {
 
             desafio.persist();
         }
+    }
+
+    public List<DesafioRequestDto> listaTodasAsAula() {
+        List<Desafio> desafios = Desafio.list("ativo = ?1", "S");
+        List<DesafioDto> dtos = new ArrayList<>();
+
+        for (Desafio desafio : desafios) {
+            DesafioDto dto = new DesafioDto();
+            dto.setId(desafio.getId());
+            dto.setTitulo(desafio.getTitulo());
+            dto.setDescricao(desafio.getDescricao());
+
+            if (desafio.getAreaCompetencia() != null) {
+                dto.setAreaCompetencia(desafio.getAreaCompetencia().getCodigo());
+            }
+
+            dto.setRespostaCorreta(desafio.getRespostaCorreta());
+            dto.setFeedbackExplicacao(desafio.getFeedbackExplicacao());
+
+            if (desafio.getNivelDificuldade() != null) {
+                dto.setNivelDificuldade(desafio.getNivelDificuldade().getDescricao());
+            }
+
+            if (desafio.getCriadoPor() != null) {
+                dto.setNomeVoluntario(desafio.getCriadoPor().getUsuario().getNome());
+            }
+            dtos.add(dto);
+        }
+
+        DesafioRequestDto requestDto = new DesafioRequestDto();
+        requestDto.setDesafios(dtos);
+
+        List<DesafioRequestDto> result = new ArrayList<>();
+        result.add(requestDto);
+
+        return result;
+    }
+
+    public DesafioDto buscarDesafio(Long id) {
+        Desafio desafio = Desafio.findById(id);
+
+        if (desafio == null) {
+            logger.error("Desafio não encontrado com ID: {}", id);
+            throw new NotFoundException("Desafio não encontrado com ID: " + id);
+        }
+
+        DesafioDto desafioDto = new DesafioDto();
+        desafioDto.setId(desafio.getId());
+        desafioDto.setTitulo(desafio.getTitulo());
+        desafioDto.setDescricao(desafio.getDescricao());
+        desafioDto.setAreaCompetencia(desafio.getAreaCompetencia().getCodigo());
+        desafioDto.setRespostaCorreta(desafio.getRespostaCorreta());
+        desafioDto.setFeedbackExplicacao(desafio.getFeedbackExplicacao());
+        desafioDto.setNivelDificuldade(desafio.getNivelDificuldade().getDescricao());
+        desafioDto.setNomeVoluntario(desafio.getCriadoPor().getUsuario().getNome());
+
+        return desafioDto;
     }
 }

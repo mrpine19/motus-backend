@@ -2,13 +2,22 @@ package br.com.motusia.api.learning.dto;
 
 public class DesafioDto {
 
+    private Long id;
     private String titulo;
     private String descricao;
     private String areaCompetencia;
     private String respostaCorreta;
     private String feedbackExplicacao;
-    private Long nivelDificuldadeId;
-    private Long voluntarioId;
+    private String nivelDificuldade;
+    private String nomeVoluntario;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
 
     public String getTitulo() {
         return titulo;
@@ -50,19 +59,19 @@ public class DesafioDto {
         this.feedbackExplicacao = feedbackExplicacao;
     }
 
-    public Long getNivelDificuldadeId() {
-        return nivelDificuldadeId;
+    public String getNivelDificuldade() {
+        return nivelDificuldade;
     }
 
-    public void setNivelDificuldadeId(Long nivelDificuldadeId) {
-        this.nivelDificuldadeId = nivelDificuldadeId;
+    public void setNivelDificuldade(String nivelDificuldade) {
+        this.nivelDificuldade = nivelDificuldade;
     }
 
-    public Long getVoluntarioId() {
-        return voluntarioId;
+    public String getNomeVoluntario() {
+        return nomeVoluntario;
     }
 
-    public void setVoluntarioId(Long voluntarioId) {
-        this.voluntarioId = voluntarioId;
+    public void setNomeVoluntario(String nomeVoluntario) {
+        this.nomeVoluntario = nomeVoluntario;
     }
 }
