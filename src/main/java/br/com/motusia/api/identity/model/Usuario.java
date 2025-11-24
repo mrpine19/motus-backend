@@ -35,7 +35,7 @@ public class Usuario extends PanacheEntityBase {
     private String tipo;
 
     @Column(name = "ativo")
-    private Boolean ativo;
+    private String ativo;
 
     public Long getId() {
         return id;
@@ -77,11 +77,11 @@ public class Usuario extends PanacheEntityBase {
         this.tipo = tipo;
     }
 
-    public Boolean getAtivo() {
+    public String getAtivo() {
         return ativo;
     }
 
-    public void setAtivo(Boolean ativo) {
+    public void setAtivo(String ativo) {
         this.ativo = ativo;
     }
 }
